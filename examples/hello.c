@@ -45,7 +45,8 @@ help(char **argv)
     printf(
         "usage: %s -i <iface>\n"
         "[-h]   Show this message\n"
-        "[-i]   Interface to use\n",
+        "[-i]   Interface to use\n"
+        "[-r]   Wait for RX\n",
         argv[0]
     );
 }
