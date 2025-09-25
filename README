@@ -1,7 +1,0 @@
-Protocol stack for OSMORA ONET infrastructure
-
-Make sure to assign an IP to your ethernet interface!:
-
---
-ip addr add 192.168.5.11/24 dev eth0
---
