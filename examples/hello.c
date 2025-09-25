@@ -27,20 +27,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <linux/if_packet.h>
-#include <netinet/in.h>
-#include <net/if.h>
-#include <net/ethernet.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <unistd.h>
 #include <string.h>
-#include "if_ether.h"
-#include "dgram.h"
-#include "link.h"
+#include <stdio.h>
+#include <unistd.h>
+#include <onet/if_ether.h>
+#include <onet/dgram.h>
+#include <onet/link.h>
 
 #define TEST_STR "Hello from o.1p!! Meow meow!"
 

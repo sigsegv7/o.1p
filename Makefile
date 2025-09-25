@@ -1,12 +1,23 @@
 CFILES = $(shell find src/ -name "*.c")
-CFLAGS = -Isrc/include/ -pedantic
-OUTPUT = bin/otrx
+OBJ = $(CFILES:.c=.o)
+CFLAGS = -Isrc/include/ -pedantic -fPIC
+OUTPUT = libonet.so
 CC = gcc
 
-.PHONY: all
-all: bin
-	$(CC) $(CFILES) $(CFLAGS) -o $(OUTPUT)
+$(OUTPUT): $(OBJ)
+	$(CC) -shared -o $@ $(OBJ)
 
-.PHONY: bin
-bin:
-	mkdir -p $@
+%.o: %.c
+	$(CC) -c $(CFLAGS) $< -o $@
+
+.PHONY: install
+install:
+	mkdir -p /usr/include/onet/
+	cp -r src/include/* /usr/include/onet/
+	cp libonet.so /usr/lib/
+	chmod 0755 /usr/lib/libonet.so
+	ldconfig
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ)
