@@ -36,6 +36,7 @@
 #include <string.h>
 #include "if_ether.h"
 #include "dgram.h"
+#include "crc.h"
 
 tx_len_t
 dgram_send(struct onet_link *link, mac_addr_t dst, void *buf, uint16_t len)
@@ -80,13 +81,16 @@ dgram_send(struct onet_link *link, mac_addr_t dst, void *buf, uint16_t len)
     return len;
 }
 
+#include <stdio.h>
 rx_len_t
 dgram_recv(struct onet_link *link, void *buf, uint16_t len)
 {
     socklen_t addr_len;
     struct sockaddr_ll saddr;
+    struct onet_dgram *o1p_hdr;
     struct ether_hdr *hdr;
     size_t dgram_len, recv_len;
+    uint32_t crc;
     uint16_t proto;
     mac_addr_t dest_mac;
     char *p;
@@ -130,6 +134,12 @@ dgram_recv(struct onet_link *link, void *buf, uint16_t len)
         }
 
         if (proto != PROTO_ID) {
+            continue;
+        }
+
+        o1p_hdr = DGRAM_HDR(p);
+        crc = crc32(o1p_hdr, sizeof(*o1p_hdr) - sizeof(crc));
+        if (crc != o1p_hdr->crc32) {
             continue;
         }
 
