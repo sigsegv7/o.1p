@@ -40,18 +40,18 @@ typedef tx_len_t rx_len_t;
 /*
  * Represents an ONET datagram
  *
- * @crc32: CRC32 checksum of data + header
  * @length: Packet length in bytes
  * @reserved: Reserved for future use
  * @reserved1: Reserved for future use
  * @port: Datagram port number to send on
+ * @crc32: CRC32 checksum of data + header
  */
 struct onet_dgram {
-    uint32_t crc32;
     uint16_t length;
     uint16_t reserved;
     uint16_t reserved1;
     uint8_t port;
+    uint32_t crc32;
 } __attribute__((packed));
 
 /*

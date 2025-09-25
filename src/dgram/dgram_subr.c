@@ -44,6 +44,6 @@ dgram_load(uint16_t length, uint8_t port, struct onet_dgram *res)
     res->length = (length >> 8) & 0xFF;
     res->length |= (length & 0xFF) << 8;
     res->port = port;
-    res->crc32 = crc32(res, sizeof(*res));
+    res->crc32 = crc32(res, sizeof(*res) - sizeof(res->crc32));
     return 0;
 }
