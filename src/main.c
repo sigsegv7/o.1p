@@ -38,6 +38,7 @@
 #include <unistd.h>
 #include <string.h>
 #include "if_ether.h"
+#include "dgram.h"
 
 #define TEST_STR "Hello from o.1p!! Meow meow!"
 
@@ -57,15 +58,18 @@ help(char **argv)
 static int
 data_send(void)
 {
-    char data[256], *p;
+    char data[DGRAM_LEN(128)], *p;
     struct sockaddr_ll saddr;
     struct ether_hdr *eth;
+    struct onet_dgram *dgram;
     struct ifreq ifr;
     int error, sockfd;
 
-    memset(data, 0, sizeof(data));
     eth = (struct ether_hdr *)data;
-    p = &data[sizeof(eth) + 100];
+    p = DGRAM_DATA(data);
+    dgram = DGRAM_HDR(data);
+
+    memset(data, 0, sizeof(data));
     memcpy(p, TEST_STR, sizeof(TEST_STR));
 
     sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW);
@@ -83,12 +87,13 @@ data_send(void)
     }
 
     /*
-     * Set up link layer sockaddr, load up the frame
+     * Set up link layer sockaddr, load up the frame, datagram
      * and send it off.
      */
     saddr.sll_ifindex = ifr.ifr_ifindex;
     saddr.sll_halen = ETH_ALEN;
     ether_load_route(0x54E1AD2CAE48, 0xFFFFFFFFFFFF, eth);
+    dgram_load(sizeof(TEST_STR), 50, dgram);
     sendto(
         sockfd, &data, sizeof(data), 0,
         (struct sockaddr *)&saddr, sizeof(struct sockaddr_ll)
