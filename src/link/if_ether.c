@@ -41,7 +41,6 @@
 /* 48-bit mask for MAC addresses */
 #define MAC_MASK 0xFFFFFFFFFFFF
 
-#include <stdio.h>
 int
 ether_load_route(mac_addr_t src, mac_addr_t dest, struct ether_hdr *res)
 {
