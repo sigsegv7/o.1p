@@ -35,6 +35,7 @@
 #include <net/ethernet.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
 #include "if_ether.h"
@@ -44,6 +45,7 @@
 #define TEST_STR "Hello from o.1p!! Meow meow!"
 
 static const char *iface = NULL;
+static bool do_recv = false;
 
 static void
 help(char **argv)
@@ -78,10 +80,36 @@ data_send(void)
     return 0;
 }
 
+static int
+data_recv(void)
+{
+    char buf[sizeof(TEST_STR) + 8];
+    struct onet_link link;
+    int error;
+
+    /* Open a link */
+    error = onet_open(iface, &link);
+    if (error < 0) {
+        return error;
+    }
+
+    memset(buf, 0, sizeof(buf));
+
+    /* Recv data */
+    dgram_recv(
+        &link, buf,
+        sizeof(TEST_STR)
+    );
+
+    printf("%s\n", buf);
+    onet_close(&link);
+    return 0;
+}
+
 int
 main(int argc, char **argv)
 {
-    int opt;
+    int opt, error;
 
     if (argc < 2) {
         printf("error: too few arguments!\n");
@@ -89,13 +117,16 @@ main(int argc, char **argv)
         return -1;
     }
 
-    while ((opt = getopt(argc, argv, "i:h")) != -1) {
+    while ((opt = getopt(argc, argv, "i:hr")) != -1) {
         switch (opt) {
         case 'h':
             help(argv);
             return -1;
         case 'i':
             iface = optarg;
+            break;
+        case 'r':
+            do_recv = true;
             break;
         }
     }
@@ -106,5 +137,6 @@ main(int argc, char **argv)
         return -1;
     }
 
-    return data_send();
+    error = do_recv ? data_recv() : data_send();
+    return error;
 }

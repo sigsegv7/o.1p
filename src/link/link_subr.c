@@ -50,7 +50,7 @@ onet_open(const char *iface, struct onet_link *res)
     }
 
     /* Open a raw socket */
-    res->sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW);
+    res->sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (res->sockfd < 0) {
         return res->sockfd;
     }

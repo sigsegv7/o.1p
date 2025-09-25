@@ -32,15 +32,6 @@
 #include <string.h>
 #include "if_ether.h"
 
-/*
- * Using the protocol ID 0xFD for testing,
- * see RFC 3692
- */
-#define PROTO_ID 0xFD
-
-/* 48-bit mask for MAC addresses */
-#define MAC_MASK 0xFFFFFFFFFFFF
-
 int
 ether_load_route(mac_addr_t src, mac_addr_t dest, struct ether_hdr *res)
 {
@@ -65,6 +56,10 @@ ether_load_route(mac_addr_t src, mac_addr_t dest, struct ether_hdr *res)
     res->dest[3] = (dest >> 16) & 0xFF;
     res->dest[4] = (dest >> 8) & 0xFF;
     res->dest[5] = dest & 0xFF;
-    res->proto = PROTO_ID;
+
+    /* Setup the protocl ID */
+    res->proto = 0;
+    res->proto |= (PROTO_ID & 0xFF) << 8;
+    res->proto |= (PROTO_ID >> 8) & 0xFF;
     return 0;
 }

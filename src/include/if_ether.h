@@ -33,8 +33,8 @@
 #include <stdint.h>
 
 #define HW_ADDR_LEN 6
-#define PROTO_IPV4 0x0800
-#define PROTO_ARP 0x0806
+#define PROTO_ID 0x88B5
+#define MAC_BROADCAST 0xFFFFFFFFFFFF
 
 typedef uint64_t mac_addr_t;
 

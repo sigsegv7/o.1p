@@ -79,3 +79,72 @@ dgram_send(struct onet_link *link, mac_addr_t dst, void *buf, uint16_t len)
     free(p);
     return len;
 }
+
+rx_len_t
+dgram_recv(struct onet_link *link, void *buf, uint16_t len)
+{
+    socklen_t addr_len;
+    struct sockaddr_ll saddr;
+    struct ether_hdr *hdr;
+    size_t dgram_len, recv_len;
+    uint16_t proto;
+    mac_addr_t dest_mac;
+    char *p;
+
+    if (link == NULL || buf == NULL) {
+        return -1;
+    }
+
+    if (len == 0) {
+        return -1;
+    }
+
+    /* Allocate an RX buffer */
+    dgram_len = DGRAM_LEN(len);
+    p = malloc(dgram_len);
+    if (p == NULL) {
+        return -1;
+    }
+
+    addr_len = sizeof(struct sockaddr_ll);
+    saddr.sll_ifindex = link->iface_idx;
+    saddr.sll_halen = HW_ADDR_LEN;
+
+    /*
+     * Wait until we get a packet for us with the right
+     * protocol ID.
+     */
+    for (;;) {
+        recv_len = recvfrom(
+            link->sockfd, p, dgram_len,
+            0, (struct sockaddr *)&saddr,
+            &addr_len
+        );
+
+        hdr = (void *)p;
+        proto = ntohs(hdr->proto);
+        dest_mac = mac_swap(hdr->dest);
+
+        if (recv_len != dgram_len) {
+            continue;
+        }
+
+        if (proto != PROTO_ID) {
+            continue;
+        }
+
+        /* If this is for everyone, take it */
+        if (dest_mac == MAC_BROADCAST) {
+            break;
+        }
+
+        /* If this is for us, take it */
+        if (dest_mac == link->hwaddr) {
+            break;
+        }
+    }
+
+    memcpy(buf, DGRAM_DATA(p), len);
+    free(p);
+    return dgram_len;
+}

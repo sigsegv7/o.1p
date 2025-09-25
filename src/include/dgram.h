@@ -35,6 +35,7 @@
 #include "link.h"
 
 typedef int16_t tx_len_t;
+typedef tx_len_t rx_len_t;
 
 /*
  * Represents an ONET datagram
@@ -103,5 +104,13 @@ tx_len_t dgram_send(
     void *buf, uint16_t len
 );
 
+/*
+ * Get data from an ONET link
+ *
+ * @link: The ONET link to recv data from
+ * @buf: The buffer to recv data into
+ * @len: The length of expected data
+ */
+rx_len_t dgram_recv(struct onet_link *link, void *buf, uint16_t len);
 
 #endif  /* DGRAM_H */
