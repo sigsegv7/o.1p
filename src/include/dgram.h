@@ -32,6 +32,9 @@
 
 #include <stdint.h>
 #include "if_ether.h"
+#include "link.h"
+
+typedef int16_t tx_len_t;
 
 /*
  * Represents an ONET datagram
@@ -83,5 +86,17 @@ struct onet_dgram {
  * value on failure.
  */
 int dgram_load(uint16_t length, uint8_t port, struct onet_dgram *res);
+
+/*
+ * Send a datagram through ONET
+ *
+ * @link: The ONET link to send data over
+ * @buf: The buffer containing data to send
+ * @len: Length of buffer to send
+ *
+ * Returns the number of bytes transmitted on success, otherwise
+ * a less than zero value on failure.
+ */
+tx_len_t dgram_send(struct onet_link *link, void *buf, uint16_t len);
 
 #endif  /* DGRAM_H */

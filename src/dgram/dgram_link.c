@@ -28,78 +28,51 @@
  */
 
 #include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <linux/if_packet.h>
 #include <netinet/in.h>
-#include <net/if.h>
+#include <linux/if_packet.h>
 #include <net/ethernet.h>
-#include <stdio.h>
+#include <net/if.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include "if_ether.h"
 #include "dgram.h"
-#include "link.h"
 
-#define TEST_STR "Hello from o.1p!! Meow meow!"
-
-static const char *iface = NULL;
-
-static void
-help(char **argv)
+tx_len_t
+dgram_send(struct onet_link *link, void *buf, uint16_t len)
 {
-    printf(
-        "usage: %s -i <iface>\n"
-        "[-h]   Show this message\n"
-        "[-i]   Interface to use\n",
-        argv[0]
+    struct sockaddr_ll saddr;
+    struct ether_hdr *eth;
+    struct onet_dgram *dgram;
+    size_t dgram_len;
+    char *p, *data;
+
+    dgram_len = DGRAM_LEN(len);
+    p = malloc(dgram_len);
+    if (p == NULL) {
+        return -1;
+    }
+
+    eth = (struct ether_hdr *)p;
+    data = DGRAM_DATA(p);
+    dgram = DGRAM_HDR(p);
+
+    /* Copy data to send buffer */
+    memset(data, 0, len);
+    memcpy(data, buf, len);
+
+    /*
+     * Set up link layer sockaddr, load up the frame, datagram
+     * and send it off.
+     */
+    saddr.sll_ifindex = link->iface_idx;
+    saddr.sll_halen = HW_ADDR_LEN;
+    ether_load_route(link->hwaddr, 0xFFFFFFFFFFFF, eth);
+    dgram_load(len, 50, dgram);
+    sendto(
+        link->sockfd, p, dgram_len, 0,
+        (struct sockaddr *)&saddr, sizeof(struct sockaddr_ll)
     );
-}
 
-static int
-data_send(void)
-{
-    struct onet_link link;
-    int error;
-
-    /* Open a link */
-    error = onet_open(iface, &link);
-    if (error < 0) {
-        return error;
-    }
-
-    dgram_send(&link, TEST_STR, sizeof(TEST_STR));
-    onet_close(&link);
-    return 0;
-}
-
-int
-main(int argc, char **argv)
-{
-    int opt;
-
-    if (argc < 2) {
-        printf("error: too few arguments!\n");
-        help(argv);
-        return -1;
-    }
-
-    while ((opt = getopt(argc, argv, "i:h")) != -1) {
-        switch (opt) {
-        case 'h':
-            help(argv);
-            return -1;
-        case 'i':
-            iface = optarg;
-            break;
-        }
-    }
-
-    /* We need an interface */
-    if (iface == NULL) {
-        printf("error: interface not supplied\n");
-        return -1;
-    }
-
-    return data_send();
+    free(p);
+    return len;
 }
