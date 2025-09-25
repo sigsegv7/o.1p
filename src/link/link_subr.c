@@ -27,102 +27,61 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/errno.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
-#include <linux/if_packet.h>
 #include <netinet/in.h>
 #include <net/if.h>
 #include <net/ethernet.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <string.h>
-#include "if_ether.h"
-#include "dgram.h"
+#include <stdio.h>
 #include "link.h"
 
-#define TEST_STR "Hello from o.1p!! Meow meow!"
-
-static const char *iface = NULL;
-
-static void
-help(char **argv)
+int
+onet_open(const char *iface, struct onet_link *res)
 {
-    printf(
-        "usage: %s -i <iface>\n"
-        "[-h]   Show this message\n"
-        "[-i]   Interface to use\n",
-        argv[0]
-    );
-}
-
-static int
-data_send(void)
-{
-    char data[DGRAM_LEN(128)], *p;
-    struct sockaddr_ll saddr;
-    struct ether_hdr *eth;
-    struct onet_dgram *dgram;
-    struct onet_link link;
+    struct ifreq ifr;
     int error;
 
-    eth = (struct ether_hdr *)data;
-    p = DGRAM_DATA(data);
-    dgram = DGRAM_HDR(data);
+    if (res == NULL) {
+        return -EINVAL;
+    }
 
-    memset(data, 0, sizeof(data));
-    memcpy(p, TEST_STR, sizeof(TEST_STR));
+    /* Open a raw socket */
+    res->sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW);
+    if (res->sockfd < 0) {
+        return res->sockfd;
+    }
 
-    /* Open a link */
-    error = onet_open(iface, &link);
+    /* Set the interface we want to use */
+    strlcpy(ifr.ifr_name, iface, IFNAMSIZ);
+    error = ioctl(res->sockfd, SIOGIFINDEX, &ifr);
     if (error < 0) {
+        printf("ioctl[SIOGIFHWADDR]: could not read hwaddr \"%s\"\n", iface);
         return error;
     }
 
-    /*
-     * Set up link layer sockaddr, load up the frame, datagram
-     * and send it off.
-     */
-    saddr.sll_ifindex = link.iface_idx;
-    saddr.sll_halen = ETH_ALEN;
-    ether_load_route(link.hwaddr, 0xFFFFFFFFFFFF, eth);
-    dgram_load(sizeof(TEST_STR), 50, dgram);
-    sendto(
-        link.sockfd, &data, sizeof(data), 0,
-        (struct sockaddr *)&saddr, sizeof(struct sockaddr_ll)
-    );
+    res->iface_idx = ifr.ifr_ifindex;
 
-    onet_close(&link);
+    /* Get the hardware address */
+    error = ioctl(res->sockfd, SIOCGIFHWADDR, &ifr);
+    if (error < 0) {
+        printf("ioctl[SIOGIFHWADDR]: could not read hwaddr \"%s\"\n", iface);
+        return error;
+    }
+
+    res->hwaddr = mac_swap((void *)ifr.ifr_hwaddr.sa_data);
     return 0;
 }
 
 int
-main(int argc, char **argv)
+onet_close(struct onet_link *olp)
 {
-    int opt;
-
-    if (argc < 2) {
-        printf("error: too few arguments!\n");
-        help(argv);
-        return -1;
+    if (olp == NULL) {
+        return -EINVAL;
     }
 
-    while ((opt = getopt(argc, argv, "i:h")) != -1) {
-        switch (opt) {
-        case 'h':
-            help(argv);
-            return -1;
-        case 'i':
-            iface = optarg;
-            break;
-        }
-    }
-
-    /* We need an interface */
-    if (iface == NULL) {
-        printf("error: interface not supplied\n");
-        return -1;
-    }
-
-    return data_send();
+    close(olp->sockfd);
 }
