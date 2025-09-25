@@ -81,7 +81,6 @@ dgram_send(struct onet_link *link, mac_addr_t dst, void *buf, uint16_t len)
     return len;
 }
 
-#include <stdio.h>
 rx_len_t
 dgram_recv(struct onet_link *link, void *buf, uint16_t len)
 {
