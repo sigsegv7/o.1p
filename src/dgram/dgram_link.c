@@ -38,7 +38,7 @@
 #include "dgram.h"
 
 tx_len_t
-dgram_send(struct onet_link *link, void *buf, uint16_t len)
+dgram_send(struct onet_link *link, mac_addr_t dst, void *buf, uint16_t len)
 {
     struct sockaddr_ll saddr;
     struct ether_hdr *eth;
@@ -60,13 +60,16 @@ dgram_send(struct onet_link *link, void *buf, uint16_t len)
     memset(data, 0, len);
     memcpy(data, buf, len);
 
+    /* Hardware address needs to be big endian */
+    dst = mac_swap((void *)&dst);
+
     /*
      * Set up link layer sockaddr, load up the frame, datagram
      * and send it off.
      */
     saddr.sll_ifindex = link->iface_idx;
     saddr.sll_halen = HW_ADDR_LEN;
-    ether_load_route(link->hwaddr, 0xFFFFFFFFFFFF, eth);
+    ether_load_route(link->hwaddr, dst, eth);
     dgram_load(len, 50, dgram);
     sendto(
         link->sockfd, p, dgram_len, 0,

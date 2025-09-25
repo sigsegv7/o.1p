@@ -68,7 +68,12 @@ data_send(void)
         return error;
     }
 
-    dgram_send(&link, TEST_STR, sizeof(TEST_STR));
+    /* Send test packet to FF:FF:FF:FF:FF:FF */
+    dgram_send(
+        &link, 0xFFFFFFFFFFFF,
+        TEST_STR, sizeof(TEST_STR)
+    );
+
     onet_close(&link);
     return 0;
 }
