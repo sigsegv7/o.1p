@@ -63,6 +63,8 @@ data_send(void)
     struct ether_hdr *eth;
     struct onet_dgram *dgram;
     struct ifreq ifr;
+    uint32_t ifidx;
+    mac_addr_t mac;
     int error, sockfd;
 
     eth = (struct ether_hdr *)data;
@@ -86,13 +88,24 @@ data_send(void)
         return error;
     }
 
+    ifidx = ifr.ifr_ifindex;
+
+    /* Grab the hardware address */
+    error = ioctl(sockfd, SIOCGIFHWADDR, &ifr);
+    if (error < 0) {
+        printf("ioctl[SIOGIFHWADDR]: could not read hwaddr \"%s\"\n", iface);
+        return error;
+    }
+
+    mac = mac_swap((void *)ifr.ifr_hwaddr.sa_data);
+
     /*
      * Set up link layer sockaddr, load up the frame, datagram
      * and send it off.
      */
-    saddr.sll_ifindex = ifr.ifr_ifindex;
+    saddr.sll_ifindex = ifidx;
     saddr.sll_halen = ETH_ALEN;
-    ether_load_route(0x54E1AD2CAE48, 0xFFFFFFFFFFFF, eth);
+    ether_load_route(mac, 0xFFFFFFFFFFFF, eth);
     dgram_load(sizeof(TEST_STR), 50, dgram);
     sendto(
         sockfd, &data, sizeof(data), 0,

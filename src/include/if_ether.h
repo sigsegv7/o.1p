@@ -44,6 +44,20 @@ struct ether_hdr {
     uint16_t proto;
 } __attribute__((packed));
 
+static inline mac_addr_t
+mac_swap(uint8_t mac[HW_ADDR_LEN])
+{
+    mac_addr_t swapped = 0;
+
+    swapped |= (uint64_t)mac[0] << 40;
+    swapped |= (uint64_t)mac[1] << 32;
+    swapped |= (uint64_t)mac[2] << 24;
+    swapped |= (uint64_t)mac[3] << 16;
+    swapped |= (uint64_t)mac[4] << 8;
+    swapped |= (uint64_t)mac[5];
+    return swapped;
+}
+
 /*
  * Load the source and dest routes into an ethernet
  * frame.
