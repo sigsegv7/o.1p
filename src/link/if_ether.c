@@ -36,7 +36,7 @@
  * Using the protocol ID 0xFD for testing,
  * see RFC 3692
  */
-#define PROTO_ID 0xFD00
+#define PROTO_ID 0xFD
 
 /* 48-bit mask for MAC addresses */
 #define MAC_MASK 0xFFFFFFFFFFFF
