@@ -27,6 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <linux/if_packet.h>
@@ -114,6 +115,10 @@ dgram_do_send(struct onet_link *link, struct dgram_params *params)
 static int
 squeak_back(struct onet_link *link, mac_addr_t src, mac_addr_t dst)
 {
+    if (link == NULL) {
+        return -EINVAL;
+    }
+
     /*
      * If one were to spoof their address as the broadcast
      * address, that could end up VERY badly as it would
@@ -139,6 +144,10 @@ dgram_send(struct onet_link *link, mac_addr_t dst, void *buf, uint16_t len)
 {
     struct dgram_params params;
 
+    if (link == NULL || buf == NULL) {
+        return -EINVAL;
+    }
+
     params.dst = dst;
     params.buf = buf;
     params.len = len;
@@ -151,6 +160,10 @@ dgram_squeak(struct onet_link *link, mac_addr_t dst)
 {
     struct dgram_params params;
     uint8_t pad[8];
+
+    if (link == NULL) {
+        return -EINVAL;
+    }
 
     params.dst = dst;
     params.buf = pad;
