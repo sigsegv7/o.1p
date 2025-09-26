@@ -38,8 +38,28 @@
 #include "dgram.h"
 #include "crc.h"
 
-tx_len_t
-dgram_send(struct onet_link *link, mac_addr_t dst, void *buf, uint16_t len)
+/*
+ * Represents datagram parameters to use for
+ * dgram_do_send()
+ *
+ * @dst: Destination MAC address
+ * @buf: Buffer to use
+ * @len: Length to transmit
+ */
+struct dgram_params {
+    mac_addr_t dst;
+    void *buf;
+    uint16_t len;
+};
+
+/*
+ * Send data through a link using specific parameters
+ *
+ * @link: Link to transmit through
+ * @params: Parameters to use
+ */
+static tx_len_t
+dgram_do_send(struct onet_link *link, struct dgram_params *params)
 {
     struct sockaddr_ll saddr;
     struct ether_hdr *eth;
@@ -47,7 +67,7 @@ dgram_send(struct onet_link *link, mac_addr_t dst, void *buf, uint16_t len)
     size_t dgram_len;
     char *p, *data;
 
-    dgram_len = DGRAM_LEN(len);
+    dgram_len = DGRAM_LEN(params->len);
     p = malloc(dgram_len);
     if (p == NULL) {
         return -1;
@@ -58,11 +78,11 @@ dgram_send(struct onet_link *link, mac_addr_t dst, void *buf, uint16_t len)
     dgram = DGRAM_HDR(p);
 
     /* Copy data to send buffer */
-    memset(data, 0, len);
-    memcpy(data, buf, len);
+    memset(data, 0, params->len);
+    memcpy(data, params->buf, params->len);
 
     /* Hardware address needs to be big endian */
-    dst = mac_swap((void *)&dst);
+    params->dst = mac_swap((void *)&params->dst);
 
     /*
      * Set up link layer sockaddr, load up the frame, datagram
@@ -70,15 +90,26 @@ dgram_send(struct onet_link *link, mac_addr_t dst, void *buf, uint16_t len)
      */
     saddr.sll_ifindex = link->iface_idx;
     saddr.sll_halen = HW_ADDR_LEN;
-    ether_load_route(link->hwaddr, dst, eth);
-    dgram_load(len, 50, dgram);
+    ether_load_route(link->hwaddr, params->dst, eth);
+    dgram_load(params->len, 50, dgram);
     sendto(
         link->sockfd, p, dgram_len, 0,
         (struct sockaddr *)&saddr, sizeof(struct sockaddr_ll)
     );
 
     free(p);
-    return len;
+    return params->len;
+}
+
+tx_len_t
+dgram_send(struct onet_link *link, mac_addr_t dst, void *buf, uint16_t len)
+{
+    struct dgram_params params;
+
+    params.dst = dst;
+    params.buf = buf;
+    params.len = len;
+    return dgram_do_send(link, &params);
 }
 
 rx_len_t
