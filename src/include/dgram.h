@@ -42,6 +42,7 @@ typedef tx_len_t rx_len_t;
  *
  * @length: Packet length in bytes
  * @reserved: Reserved for future use
+ * @type: Describes the type of packet (see OTYPE_*)
  * @reserved1: Reserved for future use
  * @port: Datagram port number to send on
  * @crc32: CRC32 checksum of data + header
@@ -49,10 +50,29 @@ typedef tx_len_t rx_len_t;
 struct onet_dgram {
     uint16_t length;
     uint16_t reserved;
-    uint16_t reserved1;
+    uint8_t type : 3;
+    uint16_t reserved1 : 13;
     uint8_t port;
     uint32_t crc32;
 } __attribute__((packed));
+
+/*
+ * ONET packet types
+ *
+ * @OTYPE_DATA: Regular data to be sent
+ * @OTYPE_SQUEAK: For peer discovery
+ *
+ * [ALL OTHER VALUES ARE RESERVED]
+ *
+ *  -- Squeaks --
+ *
+ *  A machine may squeak at the wire and those whom the squeak is
+ *  intended for shall squeak back. One thing to be aware of is that
+ *  this may allow squeak storms / attacks where a machine continuously
+ *  squeaks at a wire.
+ */
+#define OTYPE_DATA      0x0
+#define OTYPE_SQUEAK    0x1
 
 /*
  * Get the total length of a datagram including
@@ -81,12 +101,16 @@ struct onet_dgram {
  *
  * @length: Length of a packet to send
  * @port: Port number to send on
+ * @type: Packet type (OTYPE_*)
  * @res: Result is written here
  *
  * Returns zero on success, otherwise a less than zero
  * value on failure.
  */
-int dgram_load(uint16_t length, uint8_t port, struct onet_dgram *res);
+int dgram_load(
+    uint16_t length, uint8_t port,
+    uint8_t type, struct onet_dgram *res
+);
 
 /*
  * Send a datagram through ONET
@@ -103,6 +127,17 @@ tx_len_t dgram_send(
     struct onet_link *link, mac_addr_t dst,
     void *buf, uint16_t len
 );
+
+/*
+ * Send a squeak through a wire
+ *
+ * @link: Link to squeak through
+ * @dst: Destination address to squeak at
+ *
+ * Returns the length of the squeak on success, otherwise
+ * a less than zero value on failure.
+ */
+tx_len_t dgram_squeak(struct onet_link *link, mac_addr_t dst);
 
 /*
  * Get data from an ONET link

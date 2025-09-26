@@ -34,7 +34,7 @@
 #include "crc.h"
 
 int
-dgram_load(uint16_t length, uint8_t port, struct onet_dgram *res)
+dgram_load(uint16_t length, uint8_t port, uint8_t type, struct onet_dgram *res)
 {
     if (res == NULL) {
         return -EINVAL;
@@ -43,6 +43,7 @@ dgram_load(uint16_t length, uint8_t port, struct onet_dgram *res)
     memset(res, 0, sizeof(*res));
     res->length = (length >> 8) & 0xFF;
     res->length |= (length & 0xFF) << 8;
+    res->type = type;
     res->port = port;
     res->crc32 = crc32(res, sizeof(*res) - sizeof(res->crc32));
     return 0;

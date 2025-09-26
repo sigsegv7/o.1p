@@ -45,11 +45,13 @@
  * @dst: Destination MAC address
  * @buf: Buffer to use
  * @len: Length to transmit
+ * @type: Packet type to use
  */
 struct dgram_params {
     mac_addr_t dst;
     void *buf;
     uint16_t len;
+    uint8_t type;
 };
 
 /*
@@ -91,7 +93,7 @@ dgram_do_send(struct onet_link *link, struct dgram_params *params)
     saddr.sll_ifindex = link->iface_idx;
     saddr.sll_halen = HW_ADDR_LEN;
     ether_load_route(link->hwaddr, params->dst, eth);
-    dgram_load(params->len, 50, dgram);
+    dgram_load(params->len, 50, params->type, dgram);
     sendto(
         link->sockfd, p, dgram_len, 0,
         (struct sockaddr *)&saddr, sizeof(struct sockaddr_ll)
@@ -99,6 +101,37 @@ dgram_do_send(struct onet_link *link, struct dgram_params *params)
 
     free(p);
     return params->len;
+}
+
+/*
+ * Squeak back at a machine that squeaks at
+ * us.
+ *
+ * @link: Link to squeak through
+ * @src: Who squeaked first?
+ * @dst: Who was intended to be squeaked at?
+ */
+static int
+squeak_back(struct onet_link *link, mac_addr_t src, mac_addr_t dst)
+{
+    /*
+     * If one were to spoof their address as the broadcast
+     * address, that could end up VERY badly as it would
+     * result in a feedback loop.
+     */
+    if (src == MAC_BROADCAST) {
+        return -1;
+    }
+
+    /*
+     * If we were not intended and this was a not broadcast
+     * squeak, it must have been directed to another node.
+     */
+    if (dst != link->hwaddr && dst != MAC_BROADCAST) {
+        return -1;
+    }
+
+    return dgram_squeak(link, src);
 }
 
 tx_len_t
@@ -109,6 +142,20 @@ dgram_send(struct onet_link *link, mac_addr_t dst, void *buf, uint16_t len)
     params.dst = dst;
     params.buf = buf;
     params.len = len;
+    params.type = OTYPE_DATA;
+    return dgram_do_send(link, &params);
+}
+
+tx_len_t
+dgram_squeak(struct onet_link *link, mac_addr_t dst)
+{
+    struct dgram_params params;
+    uint8_t pad[8];
+
+    params.dst = dst;
+    params.buf = pad;
+    params.len = sizeof(pad);
+    params.type = OTYPE_SQUEAK;
     return dgram_do_send(link, &params);
 }
 
@@ -122,7 +169,7 @@ dgram_recv(struct onet_link *link, void *buf, uint16_t len)
     size_t dgram_len, recv_len;
     uint32_t crc;
     uint16_t proto;
-    mac_addr_t dest_mac;
+    mac_addr_t dest_mac, src_mac;
     char *p;
 
     if (link == NULL || buf == NULL) {
@@ -158,10 +205,7 @@ dgram_recv(struct onet_link *link, void *buf, uint16_t len)
         hdr = (void *)p;
         proto = ntohs(hdr->proto);
         dest_mac = mac_swap(hdr->dest);
-
-        if (recv_len != dgram_len) {
-            continue;
-        }
+        src_mac = mac_swap(hdr->source);
 
         if (proto != PROTO_ID) {
             continue;
@@ -170,6 +214,12 @@ dgram_recv(struct onet_link *link, void *buf, uint16_t len)
         o1p_hdr = DGRAM_HDR(p);
         crc = crc32(o1p_hdr, sizeof(*o1p_hdr) - sizeof(crc));
         if (crc != o1p_hdr->crc32) {
+            continue;
+        }
+
+        /* Is this a squeak? */
+        if (o1p_hdr->type == OTYPE_SQUEAK) {
+            squeak_back(link, src_mac, dest_mac);
             continue;
         }
 
